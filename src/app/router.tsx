@@ -5,6 +5,7 @@ import { LandingPage } from '@/features/landing/LandingPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { MarketsPage } from '@/features/markets/MarketsPage'
 import { TradePage } from '@/features/trade/TradePage'
+import { TradeIndex } from '@/features/trade/TradeIndex'
 import { PortfolioPage } from '@/features/portfolio/PortfolioPage'
 import { LeaderboardPage } from '@/features/leaderboard/LeaderboardPage'
 import { KeysPage } from '@/features/apikeys/KeysPage'
@@ -26,6 +27,7 @@ const appLayout = createRoute({
   ),
 })
 const marketsRoute = createRoute({ getParentRoute: () => appLayout, path: '/markets', component: MarketsPage })
+const tradeIndexRoute = createRoute({ getParentRoute: () => appLayout, path: '/trade', component: TradeIndex })
 const tradeRoute = createRoute({ getParentRoute: () => appLayout, path: '/trade/$market', component: TradePage })
 const portfolioRoute = createRoute({ getParentRoute: () => appLayout, path: '/portfolio', component: PortfolioPage })
 const leaderboardRoute = createRoute({ getParentRoute: () => appLayout, path: '/leaderboard', component: LeaderboardPage })
@@ -34,7 +36,7 @@ const keysRoute = createRoute({ getParentRoute: () => appLayout, path: '/setting
 const routeTree = rootRoute.addChildren([
   landingRoute,
   loginRoute,
-  appLayout.addChildren([marketsRoute, tradeRoute, portfolioRoute, leaderboardRoute, keysRoute]),
+  appLayout.addChildren([marketsRoute, tradeIndexRoute, tradeRoute, portfolioRoute, leaderboardRoute, keysRoute]),
 ])
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })

@@ -29,16 +29,19 @@ export interface Order {
   marketID: string
   side: Side
   orderType: OrderType
-  price: string
-  stopPrice?: string
-  origQty: string
-  remainQty: string
-  filledQty: string
-  displayQty?: string
+  // NOTE: orders return RAW integers at the market's precision (unlike depth/
+  // trades which are decimal strings). Convert with lib/format.rawToDecimal using
+  // the market's pricePrecision / qtyPrecision.
+  price: number
+  stopPrice: number
+  origQty: number
+  remainQty: number
+  filledQty: number
+  displayQty: number
   status: OrderStatus
   tif: TIF
-  createdAt: string
-  updatedAt: string
+  flags: number
+  reservedPerUnit: number
 }
 
 export interface PlaceOrderRequest {
