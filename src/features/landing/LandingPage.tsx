@@ -3,7 +3,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Boxes,
-  CandlestickChart,
   Cpu,
   Gauge,
   Radio,
@@ -12,6 +11,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Footer, Nav, SectionHeading } from './chrome'
 
 // ── static demo data ─────────────────────────────────────────────────────────
 
@@ -72,41 +72,6 @@ export function LandingPage() {
       <FinalCta />
       <Footer />
     </div>
-  )
-}
-
-function Wordmark({ className = 'size-7' }: { className?: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className={`flex ${className} items-center justify-center rounded-md bg-gradient-to-br from-accent to-emerald-400 shadow-[0_0_20px_-4px_rgba(22,199,132,0.6)]`}>
-        <CandlestickChart className="size-[60%] text-black" />
-      </div>
-      <span className="text-base font-bold tracking-tight">PaperEx</span>
-    </div>
-  )
-}
-
-function Nav() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-edge/60 bg-bg/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
-        <Wordmark />
-        <nav className="hidden items-center gap-8 text-sm text-muted md:flex">
-          <a href="#features" className="transition-colors hover:text-zinc-100">Features</a>
-          <a href="#how" className="transition-colors hover:text-zinc-100">How it works</a>
-          <a href="#api" className="transition-colors hover:text-zinc-100">API</a>
-          <Link to="/leaderboard" className="transition-colors hover:text-zinc-100">Leaderboard</Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link to="/login">
-            <Button variant="ghost" size="sm" className="text-zinc-300">Log in</Button>
-          </Link>
-          <Link to="/login">
-            <Button size="sm">Start trading</Button>
-          </Link>
-        </div>
-      </div>
-    </header>
   )
 }
 
@@ -465,28 +430,3 @@ function FinalCta() {
   )
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-edge bg-bg">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
-        <Wordmark className="size-6" />
-        <nav className="flex items-center gap-6 text-sm text-muted">
-          <a href="#features" className="hover:text-zinc-100">Features</a>
-          <a href="#how" className="hover:text-zinc-100">How it works</a>
-          <a href="#api" className="hover:text-zinc-100">API</a>
-          <Link to="/leaderboard" className="hover:text-zinc-100">Leaderboard</Link>
-        </nav>
-        <span className="font-mono text-xs text-muted">© 2026 PaperEx · paper trading only</span>
-      </div>
-    </footer>
-  )
-}
-
-function SectionHeading({ eyebrow, title, center }: { eyebrow: string; title: string; center?: boolean }) {
-  return (
-    <div className={center ? 'text-center' : ''}>
-      <div className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-accent">{eyebrow}</div>
-      <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h2>
-    </div>
-  )
-}

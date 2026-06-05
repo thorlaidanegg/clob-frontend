@@ -1,5 +1,5 @@
 import { Link, Outlet } from '@tanstack/react-router'
-import { CandlestickChart, KeyRound, LineChart, Trophy, Wallet, Zap } from 'lucide-react'
+import { Bot, CandlestickChart, Home, KeyRound, LineChart, Trophy, Wallet, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { usePortfolio } from '@/api/portfolio'
@@ -8,12 +8,19 @@ import { useLiveSync } from '@/ws/useLiveSync'
 import { formatDecimal } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+// Core app routes — shown in the desktop nav and the mobile bottom bar.
 const NAV: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/markets', label: 'Markets', icon: LineChart },
   { to: '/trade', label: 'Trade', icon: Zap },
   { to: '/portfolio', label: 'Portfolio', icon: Wallet },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/settings/keys', label: 'Developer', icon: KeyRound },
+]
+
+// Secondary/marketing routes — desktop nav only.
+const EXTRA_NAV: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: '/bots', label: 'Bots', icon: Bot },
+  { to: '/', label: 'Home', icon: Home },
 ]
 
 function initials(email: string | undefined): string {
@@ -29,15 +36,15 @@ export function AppShell() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-1 border-b border-edge bg-[#0d0d10] px-3 sm:px-4">
-        <Link to="/markets" className="mr-2 flex items-center gap-2 font-bold tracking-tight sm:mr-4">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-1 border-b border-edge bg-[#0d0d10] px-3 sm:px-4">
+        <Link to="/markets" className="flex items-center gap-2 font-bold tracking-tight">
           <div className="flex size-6 items-center justify-center rounded-md bg-accent">
             <CandlestickChart className="size-4 text-black" />
           </div>
           <span className="hidden text-sm sm:inline">PaperEx</span>
         </Link>
 
-        {/* Desktop inline nav */}
+        {/* Desktop inline nav — centered between the logo and the controls */}
         <nav className="hidden items-center gap-1 text-sm lg:flex">
           {NAV.map((n) => (
             <Link
@@ -52,9 +59,24 @@ export function AppShell() {
               <span>{n.label}</span>
             </Link>
           ))}
+          <span className="mx-1 h-5 w-px bg-edge" />
+          {EXTRA_NAV.map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              activeOptions={{ exact: n.to === '/' }}
+              className={cn(
+                'flex items-center gap-1.5 rounded px-3 py-1.5 text-muted transition-colors hover:text-zinc-100',
+                '[&.active]:text-zinc-100',
+              )}
+            >
+              <n.icon className="size-3.5" />
+              <span>{n.label}</span>
+            </Link>
+          ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {portfolio && (
             <div className="flex items-center gap-1.5 rounded-md border border-edge bg-panel-2 px-2 py-1 sm:gap-2 sm:pl-2.5 sm:pr-3">
               <Wallet className="size-3.5 shrink-0 text-muted" />

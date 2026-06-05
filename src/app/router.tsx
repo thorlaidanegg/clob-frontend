@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/re
 import { RequireAuth } from '@/auth/RequireAuth'
 import { AppShell } from '@/components/AppShell'
 import { LandingPage } from '@/features/landing/LandingPage'
+import { BotsPage } from '@/features/bots/BotsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { MarketsPage } from '@/features/markets/MarketsPage'
 import { TradePage } from '@/features/trade/TradePage'
@@ -15,6 +16,7 @@ const rootRoute = createRootRoute({ component: () => <Outlet /> })
 // Public routes (no shell, full-screen).
 const landingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: LandingPage })
 const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/login', component: LoginPage })
+const botsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bots', component: BotsPage })
 
 // Authenticated app: a pathless layout route that renders the shell behind the guard.
 const appLayout = createRoute({
@@ -36,6 +38,7 @@ const keysRoute = createRoute({ getParentRoute: () => appLayout, path: '/setting
 const routeTree = rootRoute.addChildren([
   landingRoute,
   loginRoute,
+  botsRoute,
   appLayout.addChildren([marketsRoute, tradeIndexRoute, tradeRoute, portfolioRoute, leaderboardRoute, keysRoute]),
 ])
 
