@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { Activity, ChevronDown, X } from 'lucide-react'
+import { Activity, ChevronDown } from 'lucide-react'
 import { useDepthSnapshot, useMarket, useMarkets, useRecentTrades } from '@/api/markets'
-import { useCancelOrder, useOpenOrders, usePlaceOrder } from '@/api/orders'
+import { useOpenOrders, usePlaceOrder } from '@/api/orders'
 import { usePortfolio } from '@/api/portfolio'
 import { useLiveTrades, useOrderBook, type BookLevel } from '@/ws/stores'
-import { formatDecimal, rawToDecimal, toNum } from '@/lib/format'
+import { OpenOrdersTable } from '@/components/OpenOrdersTable'
+import { toast } from '@/components/Toast'
+import { formatDecimal, toNum } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Market, Order, OrderType, Side, TIF } from '@/lib/types'
+import type { Market, OrderType, Side, TIF } from '@/lib/types'
 
 export function TradePage() {
   const params = useParams({ strict: false }) as { market?: string }
@@ -23,6 +25,8 @@ export function TradePage() {
   const bestBid = book.bids[0]?.price
   const bestAsk = book.asks[0]?.price
   const lastPrice = trades[0]?.price ?? bestBid ?? bestAsk
+  // Last trade up if the resting maker was an ask (i.e. a buyer took liquidity).
+  const lastUp = trades.length === 0 || trades[0].makerSide === 'ask'
 
   return (
     <div className="flex h-full flex-col font-mono">
@@ -30,7 +34,7 @@ export function TradePage() {
 
       <div className="flex min-h-0 flex-1">
         <ChartPanel market={market} lastPrice={lastPrice} trades={trades} pp={pp} />
-        <OrderBookPanel book={book} pp={pp} qp={qp} bestBid={bestBid} bestAsk={bestAsk} />
+        <OrderBookPanel book={book} pp={pp} qp={qp} bestBid={bestBid} bestAsk={bestAsk} lastPrice={lastPrice} lastUp={lastUp} />
         <TradesAndForm market={market} cfg={cfg} trades={trades} lastPrice={lastPrice} pp={pp} qp={qp} />
       </div>
 
@@ -172,12 +176,16 @@ function OrderBookPanel({
   qp,
   bestBid,
   bestAsk,
+  lastPrice,
+  lastUp,
 }: {
   book: { bids: BookLevel[]; asks: BookLevel[] }
   pp: number
   qp: number
   bestBid: string | undefined
   bestAsk: string | undefined
+  lastPrice: string | undefined
+  lastUp: boolean
 }) {
   const asks = book.asks.slice(0, 12)
   const bids = book.bids.slice(0, 12)
@@ -205,15 +213,23 @@ function OrderBookPanel({
         <span>Size</span>
         <span>Total</span>
       </div>
-      {/* Asks (reversed so best ask sits next to the spread) */}
-      <div className="flex flex-1 flex-col-reverse justify-end overflow-hidden">
-        {asks.map((l, i) => (
-          <BookRow key={`a${l.price}`} level={l} total={askCum[i]} width={(askCum[i] / maxCum) * 100} side="ask" pp={pp} qp={qp} />
-        ))}
+      {/* Asks: bottom-aligned so the best ask sits right on the spread line, with
+          any empty space pushed to the top (not between asks and the spread). */}
+      <div className="flex flex-1 flex-col justify-end overflow-hidden">
+        {asks
+          .map((l, i) => ({ level: l, total: askCum[i] }))
+          .reverse()
+          .map(({ level, total }) => (
+            <BookRow key={`a${level.price}`} level={level} total={total} width={(total / maxCum) * 100} side="ask" pp={pp} qp={qp} />
+          ))}
       </div>
-      <div className="flex items-center justify-center gap-2 border-y border-edge bg-panel-2/40 py-1.5 font-sans text-[10px] text-muted">
-        <span>Spread</span>
-        <span className="font-mono text-zinc-50">{spread}</span>
+      <div className="flex items-center justify-between border-y border-edge bg-panel-2/40 px-3 py-1.5">
+        <span className={cn('font-mono text-sm font-bold tabular-nums', lastUp ? 'text-up' : 'text-down')}>
+          {lastPrice ? formatDecimal(lastPrice, pp) : '—'}
+        </span>
+        <span className="font-sans text-[10px] text-muted">
+          spread <span className="font-mono text-zinc-300">{spread}</span>
+        </span>
       </div>
       <div className="flex flex-1 flex-col overflow-hidden">
         {bids.map((l, i) => (
@@ -354,6 +370,7 @@ function OrderForm({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!market) return
+    const verb = side === 'bid' ? 'Buy' : 'Sell'
     place.mutate(
       {
         marketID: market,
@@ -362,9 +379,16 @@ function OrderForm({
         price: type === 'market' ? undefined : price,
         stopPrice: type === 'stop' ? stopPrice : undefined,
         qty,
-        tif,
+        // Market orders can't rest — let the backend default them to IOC.
+        tif: type === 'market' ? undefined : tif,
       },
-      { onSuccess: () => setQty('') },
+      {
+        onSuccess: (res) => {
+          setQty('')
+          toast.success(`${verb} ${qty} ${base} — order ${res.status}`)
+        },
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Order failed'),
+      },
     )
   }
 
@@ -522,98 +546,18 @@ function Field({
 // ── Bottom: open orders ──────────────────────────────────────────────────────
 
 function OpenOrdersPanel() {
-  const { data: orders, isLoading } = useOpenOrders()
-  const { data: markets } = useMarkets()
-  const cancel = useCancelOrder()
-
-  const precByMarket = useMemo(() => {
-    const map = new Map<string, { pp: number; qp: number }>()
-    for (const m of markets ?? []) map.set(m.marketID, { pp: m.pricePrecision, qp: m.qtyPrecision })
-    return map
-  }, [markets])
+  const { data: orders } = useOpenOrders()
 
   return (
-    <div className="h-52 shrink-0 border-t border-edge bg-[#0d0d10]">
+    <div className="flex h-52 shrink-0 flex-col border-t border-edge bg-[#0d0d10]">
       <div className="flex items-center gap-6 border-b border-edge px-4">
         <span className="border-b-2 border-accent py-2.5 font-sans text-xs font-bold text-zinc-50">
           Open Orders {orders?.length ? `(${orders.length})` : ''}
         </span>
       </div>
-      <div className="h-[calc(100%-37px)] overflow-auto">
-        <table className="w-full text-left text-[11px]">
-          <thead className="sticky top-0 bg-[#0d0d10]">
-            <tr className="font-sans text-[10px] uppercase text-muted">
-              {['Market', 'Type', 'Side', 'Price', 'Qty', 'Filled', 'Status', 'Cancel'].map((h) => (
-                <th key={h} className="px-4 py-2 font-medium">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-muted">
-                  Loading…
-                </td>
-              </tr>
-            )}
-            {!isLoading && (orders?.length ?? 0) === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-muted">
-                  No open orders.
-                </td>
-              </tr>
-            )}
-            {orders?.map((o) => (
-              <OrderRow
-                key={o.orderID}
-                order={o}
-                prec={precByMarket.get(o.marketID) ?? { pp: 2, qp: 4 }}
-                onCancel={() => cancel.mutate(o.orderID)}
-                canceling={cancel.isPending}
-              />
-            ))}
-          </tbody>
-        </table>
+      <div className="min-h-0 flex-1">
+        <OpenOrdersTable />
       </div>
     </div>
-  )
-}
-
-function OrderRow({
-  order,
-  prec,
-  onCancel,
-  canceling,
-}: {
-  order: Order
-  prec: { pp: number; qp: number }
-  onCancel: () => void
-  canceling: boolean
-}) {
-  const filledPct = order.origQty > 0 ? Math.round((order.filledQty / order.origQty) * 100) : 0
-  const buy = order.side === 'bid'
-  return (
-    <tr className="border-t border-edge">
-      <td className="px-4 py-1.5 text-zinc-50">{order.marketID}</td>
-      <td className="px-4 py-1.5 capitalize text-muted">{order.orderType}</td>
-      <td className="px-4 py-1.5">
-        <span className={cn('rounded-sm px-2 py-0.5', buy ? 'bg-up/15 text-up' : 'bg-down/15 text-down')}>
-          {buy ? 'Buy' : 'Sell'}
-        </span>
-      </td>
-      <td className="px-4 py-1.5 tabular-nums text-zinc-50">{rawToDecimal(order.price, prec.pp)}</td>
-      <td className="px-4 py-1.5 tabular-nums text-zinc-50">{rawToDecimal(order.origQty, prec.qp)}</td>
-      <td className="px-4 py-1.5 tabular-nums text-muted">{filledPct}%</td>
-      <td className="px-4 py-1.5">
-        <span className="rounded-sm bg-amber-400/15 px-2 py-0.5 capitalize text-amber-400">{order.status}</span>
-      </td>
-      <td className="px-4 py-1.5">
-        <button onClick={onCancel} disabled={canceling} className="text-down disabled:opacity-40">
-          <X className="size-3.5" />
-        </button>
-      </td>
-    </tr>
   )
 }

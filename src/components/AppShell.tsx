@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { usePortfolio } from '@/api/portfolio'
 import { useWsStatus } from '@/ws/client'
+import { useLiveSync } from '@/ws/useLiveSync'
 import { formatDecimal } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +25,7 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const ws = useWsStatus()
   const { data: portfolio } = usePortfolio()
+  useLiveSync()
 
   return (
     <div className="flex h-full flex-col">

@@ -20,8 +20,14 @@ export interface BookView {
 const EMPTY_BOOK: BookView = { bids: [], asks: [] }
 const EMPTY_TRADES: Trade[] = []
 
+// The WS feed forwards raw engine events, which encode side as an int (1=bid,
+// 2=ask) — unlike the REST DTOs which use 'bid'/'ask'. Normalize both shapes.
+export function wireSide(s: Side | number | undefined): Side {
+  return s === 'bid' || s === 1 ? 'bid' : 'ask'
+}
+
 interface DepthUpdate {
-  side: Side
+  side: Side | number
   price: string
   newTotalQty: string
   updateType?: string
@@ -53,7 +59,7 @@ class OrderBookStore {
   }
 
   apply(u: DepthUpdate): void {
-    const m = u.side === 'bid' ? this.bids : this.asks
+    const m = wireSide(u.side) === 'bid' ? this.bids : this.asks
     if (u.updateType === 'delete' || toNum(u.newTotalQty) === 0) m.delete(u.price)
     else m.set(u.price, u.newTotalQty)
     this.schedule()
@@ -153,6 +159,28 @@ export function useOrderBook(market: string | undefined, seed?: BookSnapshot): B
   )
 }
 
+/** Map a raw TradeExecuted WS event (numeric makerSide, ns timestamp) into the
+ * REST Trade shape the tape renders. */
+function normalizeWsTrade(data: unknown): Trade {
+  const d = data as Record<string, unknown>
+  const tsNs = typeof d.timestamp === 'number' ? d.timestamp : 0
+  return {
+    tradeID: String(d.tradeID ?? crypto.randomUUID()),
+    marketID: String(d.marketID ?? ''),
+    makerOrderID: String(d.makerOrderID ?? ''),
+    takerOrderID: String(d.takerOrderID ?? ''),
+    makerUserID: String(d.makerUserID ?? ''),
+    takerUserID: String(d.takerUserID ?? ''),
+    makerSide: wireSide(d.makerSide as Side | number | undefined),
+    price: String(d.price ?? '0'),
+    qty: String(d.qty ?? '0'),
+    makerFee: String(d.makerFee ?? '0'),
+    takerFee: String(d.takerFee ?? '0'),
+    feeCurrency: String(d.feeCurrency ?? ''),
+    createdAt: tsNs ? new Date(tsNs / 1e6).toISOString() : new Date().toISOString(),
+  }
+}
+
 /** Live trades tape for a market, seeded from REST, appended over WS. */
 export function useLiveTrades(market: string | undefined, seed?: Trade[]): Trade[] {
   const store = market ? tapeFor(market) : null
@@ -161,7 +189,7 @@ export function useLiveTrades(market: string | undefined, seed?: Trade[]): Trade
     if (seed) store.seed(seed)
     const offSub = wsClient.subscribe(`trades:${market}`)
     const offMsg = wsClient.onMessage((msg: ServerMessage) => {
-      if (msg.channel === `trades:${market}` && msg.data) store.push(msg.data as Trade)
+      if (msg.channel === `trades:${market}` && msg.data) store.push(normalizeWsTrade(msg.data))
     })
     return () => {
       offSub()

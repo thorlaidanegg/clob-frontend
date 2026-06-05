@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Wallet } from 'lucide-react'
 import { usePortfolio } from '@/api/portfolio'
+import { useOpenOrders } from '@/api/orders'
+import { OpenOrdersTable } from '@/components/OpenOrdersTable'
 import { formatDecimal, formatSigned, signOf, toNum } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Position } from '@/lib/types'
@@ -132,6 +134,28 @@ export function PortfolioPage() {
             )}
           </div>
         </div>
+      </div>
+
+      <OpenOrdersCard />
+    </div>
+  )
+}
+
+function OpenOrdersCard() {
+  const { data: orders } = useOpenOrders()
+  return (
+    <div className="mt-6 overflow-hidden rounded-lg border border-edge bg-panel">
+      <div className="flex items-center gap-2 border-b border-edge px-5 py-3">
+        <h2 className="text-base font-bold">Open Orders</h2>
+        {orders && orders.length > 0 && (
+          <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] text-accent">
+            <span className="size-1.5 rounded-full bg-accent" />
+            {orders.length}
+          </span>
+        )}
+      </div>
+      <div className="max-h-80">
+        <OpenOrdersTable />
       </div>
     </div>
   )

@@ -20,12 +20,14 @@ export function useMarket(id: string | undefined) {
   })
 }
 
-/** Initial depth snapshot. Live updates come over the WebSocket (see ws/). */
+/** Initial depth snapshot. Live deltas come over the WebSocket (see ws/); the
+ * periodic refetch re-seeds the store so it can't drift over a long session. */
 export function useDepthSnapshot(id: string | undefined, levels = 25) {
   return useQuery({
     queryKey: qk.markets.depth(id ?? ''),
     queryFn: () => http.get<BookSnapshot>(`/v1/markets/${id}/depth?levels=${levels}`),
     enabled: !!id,
+    refetchInterval: 15_000,
   })
 }
 

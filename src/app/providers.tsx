@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { AuthProvider } from '@/auth/AuthContext'
+import { Toaster } from '@/components/Toast'
 import { router } from './router'
 
 const queryClient = new QueryClient({
@@ -18,6 +19,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RouterProvider router={router} />
+        <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   )

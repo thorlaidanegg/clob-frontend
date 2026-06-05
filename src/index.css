@@ -41,3 +41,13 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-edge-strong) transparent;
 }
+
+/* Tailwind v4's Preflight no longer sets cursor:pointer on buttons — restore it
+   for all interactive controls (disabled ones keep the default cursor). */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled),
+label[for],
+summary {
+  cursor: pointer;
+}
