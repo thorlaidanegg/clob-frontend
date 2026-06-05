@@ -27,10 +27,10 @@ export function LeaderboardPage() {
   const podium = rows.slice(0, 3)
 
   return (
-    <div className="bg-bg px-6 py-8 md:px-12">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-[28px] font-bold tracking-tight">Leaderboard</h1>
-        <div className="flex items-center gap-1 rounded-full border border-edge bg-panel p-1">
+    <div className="bg-bg px-4 py-6 sm:px-6 sm:py-8 md:px-12">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">Leaderboard</h1>
+        <div className="flex w-fit items-center gap-1 rounded-full border border-edge bg-panel p-1">
           <span className="rounded-full bg-accent px-4 py-1 text-xs font-medium text-black">Global</span>
           <span className="px-4 py-1 text-xs font-medium text-muted">Realized PnL</span>
         </div>
@@ -127,7 +127,7 @@ function PodiumCard({ e, isMe, tall }: { e: LeaderboardEntry; isMe: boolean; tal
   return (
     <div
       className={cn(
-        'flex w-72 items-center gap-3 rounded-xl border border-edge border-l-[3px] bg-[#161618] p-6',
+        'flex w-full items-center gap-3 rounded-xl border border-edge border-l-[3px] bg-[#161618] p-6 sm:w-72',
         border,
         tall ? 'h-40 shadow-[0_0_40px_-12px_rgba(22,199,132,0.25)]' : 'h-32',
       )}

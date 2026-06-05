@@ -16,7 +16,7 @@ const GRANTED_SCOPES = ['orders:read', 'orders:write', 'portfolio:read']
 
 export function KeysPage() {
   return (
-    <div className="mx-auto max-w-5xl p-8">
+    <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Developer</h1>
         <p className="mt-1 text-sm text-muted">
@@ -98,7 +98,7 @@ function ApiKeysSection() {
       )}
 
       <div className="mt-4 overflow-x-auto rounded-lg border border-edge">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-160 text-sm">
           <thead className="bg-panel text-[11px] uppercase tracking-wider text-muted">
             <tr>
               <th className="px-4 py-2.5 text-left font-medium">Label</th>
@@ -277,8 +277,8 @@ function QuickstartSection() {
       <p className="mb-3 mt-6 text-xs font-medium uppercase tracking-wider text-muted">
         Endpoint reference
       </p>
-      <div className="overflow-hidden rounded-lg border border-edge">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border border-edge">
+        <table className="w-full min-w-120 text-sm">
           <tbody className="divide-y divide-edge">
             {ENDPOINTS.map((e) => (
               <tr key={e.method + e.path}>

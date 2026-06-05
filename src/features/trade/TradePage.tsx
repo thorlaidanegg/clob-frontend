@@ -30,14 +30,34 @@ export function TradePage() {
   // Last trade up if the resting maker was an ask (i.e. a buyer took liquidity).
   const lastUp = trades.length === 0 || trades[0].makerSide === 'ask'
 
+  // Order type + price are lifted so clicking an order-book level can prefill them.
+  const [orderType, setOrderType] = useState<OrderType>('limit')
+  const [orderPrice, setOrderPrice] = useState('')
+  const pickPrice = (price: string) => {
+    setOrderType('limit')
+    setOrderPrice(price)
+  }
+
   return (
-    <div className="flex h-full flex-col font-mono">
+    <div className="flex min-h-full flex-col font-mono lg:h-full lg:overflow-hidden">
       <MarketHeader market={market} cfg={cfg} lastPrice={lastPrice} bestBid={bestBid} bestAsk={bestAsk} pp={pp} />
 
-      <div className="flex min-h-0 flex-1">
+      {/* Desktop: 3 columns. Mobile: stacked (chart → form → book) and scrollable. */}
+      <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
         <ChartPanel market={market} lastPrice={lastPrice} trades={trades} pp={pp} />
-        <OrderBookPanel book={book} pp={pp} qp={qp} bestBid={bestBid} bestAsk={bestAsk} lastPrice={lastPrice} lastUp={lastUp} />
-        <TradesAndForm market={market} cfg={cfg} trades={trades} lastPrice={lastPrice} pp={pp} qp={qp} />
+        <OrderBookPanel book={book} pp={pp} qp={qp} bestBid={bestBid} bestAsk={bestAsk} lastPrice={lastPrice} lastUp={lastUp} onPickPrice={pickPrice} />
+        <TradesAndForm
+          market={market}
+          cfg={cfg}
+          trades={trades}
+          lastPrice={lastPrice}
+          pp={pp}
+          qp={qp}
+          orderType={orderType}
+          setOrderType={setOrderType}
+          orderPrice={orderPrice}
+          setOrderPrice={setOrderPrice}
+        />
       </div>
 
       <BottomPanel />
@@ -67,8 +87,8 @@ function MarketHeader({
   const spread = bestBid && bestAsk ? (toNum(bestAsk) - toNum(bestBid)).toFixed(pp) : '—'
 
   return (
-    <div className="flex shrink-0 items-center justify-between border-b border-edge px-4 py-3">
-      <div className="flex items-center gap-4">
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-y-2 border-b border-edge px-3 py-2.5 sm:px-4 sm:py-3">
+      <div className="flex items-center gap-3 sm:gap-4">
         <div className="relative">
           <select
             value={market ?? ''}
@@ -85,16 +105,16 @@ function MarketHeader({
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted" />
         </div>
-        <span className="text-2xl font-bold tabular-nums">
+        <span className="text-xl font-bold tabular-nums sm:text-2xl">
           {lastPrice ? formatDecimal(lastPrice, pp) : '—'}
         </span>
-        <span className="font-sans text-xs text-muted">
+        <span className="hidden font-sans text-xs text-muted sm:inline">
           {cfg && `${cfg.baseAsset} / ${cfg.quoteAsset}`}
         </span>
       </div>
-      <div className="flex items-center gap-6 font-sans text-xs">
-        <Stat label="Best Bid" value={bestBid ? formatDecimal(bestBid, pp) : '—'} className="text-up" />
-        <Stat label="Best Ask" value={bestAsk ? formatDecimal(bestAsk, pp) : '—'} className="text-down" />
+      <div className="flex items-center gap-4 font-sans text-xs sm:gap-6">
+        <Stat label="Bid" value={bestBid ? formatDecimal(bestBid, pp) : '—'} className="text-up" />
+        <Stat label="Ask" value={bestAsk ? formatDecimal(bestAsk, pp) : '—'} className="text-down" />
         <Stat label="Spread" value={spread} />
       </div>
     </div>
@@ -123,10 +143,10 @@ function ChartPanel({
   trades: Trade[]
   pp: number
 }) {
-  const [kind, setKind] = useState<ChartKind>('candle')
+  const [kind, setKind] = useState<ChartKind>('line')
 
   return (
-    <div className="flex w-[55%] min-w-0 flex-col border-r border-edge bg-[#0d0d10]">
+    <div className="flex h-72 w-full min-w-0 flex-col border-b border-edge bg-[#0d0d10] lg:order-1 lg:h-auto lg:w-[55%] lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between border-b border-edge px-4 py-2 font-sans">
         <div className="flex items-baseline gap-3">
           <span className="text-sm font-semibold">{market}</span>
@@ -174,6 +194,7 @@ function OrderBookPanel({
   bestAsk,
   lastPrice,
   lastUp,
+  onPickPrice,
 }: {
   book: { bids: BookLevel[]; asks: BookLevel[] }
   pp: number
@@ -182,6 +203,7 @@ function OrderBookPanel({
   bestAsk: string | undefined
   lastPrice: string | undefined
   lastUp: boolean
+  onPickPrice: (price: string) => void
 }) {
   const asks = book.asks.slice(0, 12)
   const bids = book.bids.slice(0, 12)
@@ -200,7 +222,7 @@ function OrderBookPanel({
   const spread = bestBid && bestAsk ? (toNum(bestAsk) - toNum(bestBid)).toFixed(pp) : '—'
 
   return (
-    <div className="flex w-[22%] min-w-0 flex-col border-r border-edge bg-bg">
+    <div className="order-3 flex h-96 w-full min-w-0 flex-col border-b border-edge bg-bg lg:order-2 lg:h-auto lg:w-[22%] lg:border-b-0 lg:border-r">
       <div className="border-b border-edge px-3 py-2 font-sans text-[10px] uppercase tracking-wide text-muted">
         Order Book
       </div>
@@ -216,7 +238,7 @@ function OrderBookPanel({
           .map((l, i) => ({ level: l, total: askCum[i] }))
           .reverse()
           .map(({ level, total }) => (
-            <BookRow key={`a${level.price}`} level={level} total={total} width={(total / maxCum) * 100} side="ask" pp={pp} qp={qp} />
+            <BookRow key={`a${level.price}`} level={level} total={total} width={(total / maxCum) * 100} side="ask" pp={pp} qp={qp} onPick={onPickPrice} />
           ))}
       </div>
       <div className="flex items-center justify-between border-y border-edge bg-panel-2/40 px-3 py-1.5">
@@ -229,7 +251,7 @@ function OrderBookPanel({
       </div>
       <div className="flex flex-1 flex-col overflow-hidden">
         {bids.map((l, i) => (
-          <BookRow key={`b${l.price}`} level={l} total={bidCum[i]} width={(bidCum[i] / maxCum) * 100} side="bid" pp={pp} qp={qp} />
+          <BookRow key={`b${l.price}`} level={l} total={bidCum[i]} width={(bidCum[i] / maxCum) * 100} side="bid" pp={pp} qp={qp} onPick={onPickPrice} />
         ))}
       </div>
     </div>
@@ -243,6 +265,7 @@ function BookRow({
   side,
   pp,
   qp,
+  onPick,
 }: {
   level: BookLevel
   total: number
@@ -250,9 +273,15 @@ function BookRow({
   side: Side
   pp: number
   qp: number
+  onPick: (price: string) => void
 }) {
   return (
-    <div className="relative flex h-6 items-center justify-between px-3 text-[13px]">
+    <button
+      type="button"
+      onClick={() => onPick(level.price)}
+      title={`Use ${formatDecimal(level.price, pp)} as limit price`}
+      className="relative flex h-6 w-full items-center justify-between px-3 text-[13px] hover:bg-panel-2/60"
+    >
       <div
         className={cn('absolute inset-y-0 right-0', side === 'ask' ? 'bg-down/15' : 'bg-up/15')}
         style={{ width: `${width}%` }}
@@ -262,7 +291,7 @@ function BookRow({
       </span>
       <span className="relative z-10 tabular-nums text-zinc-50">{formatDecimal(level.qty, qp)}</span>
       <span className="relative z-10 tabular-nums text-muted">{total.toFixed(qp > 2 ? 2 : qp)}</span>
-    </div>
+    </button>
   )
 }
 
@@ -275,6 +304,10 @@ function TradesAndForm({
   lastPrice,
   pp,
   qp,
+  orderType,
+  setOrderType,
+  orderPrice,
+  setOrderPrice,
 }: {
   market: string | undefined
   cfg: Market | undefined
@@ -282,11 +315,25 @@ function TradesAndForm({
   lastPrice: string | undefined
   pp: number
   qp: number
+  orderType: OrderType
+  setOrderType: (t: OrderType) => void
+  orderPrice: string
+  setOrderPrice: (p: string) => void
 }) {
   return (
-    <div className="flex w-[23%] min-w-0 flex-col bg-panel">
-      <OrderForm market={market} cfg={cfg} lastPrice={lastPrice} pp={pp} qp={qp} />
-      <div className="flex min-h-0 flex-1 flex-col border-t border-edge">
+    <div className="order-2 flex w-full min-w-0 flex-col border-b border-edge bg-panel lg:order-3 lg:w-[23%] lg:border-b-0">
+      <OrderForm
+        market={market}
+        cfg={cfg}
+        lastPrice={lastPrice}
+        pp={pp}
+        qp={qp}
+        type={orderType}
+        setType={setOrderType}
+        price={orderPrice}
+        setPrice={setOrderPrice}
+      />
+      <div className="flex h-64 flex-col border-t border-edge lg:h-auto lg:min-h-0 lg:flex-1">
         <div className="flex items-center justify-between border-b border-edge px-3 py-2">
           <span className="font-sans text-[11px] uppercase tracking-wide text-muted">Recent Trades</span>
           <Activity className="size-3.5 text-accent" />
@@ -332,18 +379,24 @@ function OrderForm({
   lastPrice,
   pp,
   qp,
+  type,
+  setType,
+  price,
+  setPrice,
 }: {
   market: string | undefined
   cfg: Market | undefined
   lastPrice: string | undefined
   pp: number
   qp: number
+  type: OrderType
+  setType: (t: OrderType) => void
+  price: string
+  setPrice: (p: string) => void
 }) {
   const place = usePlaceOrder()
   const { data: portfolio } = usePortfolio()
   const [side, setSide] = useState<Side>('bid')
-  const [type, setType] = useState<OrderType>('limit')
-  const [price, setPrice] = useState('')
   const [stopPrice, setStopPrice] = useState('')
   const [qty, setQty] = useState('')
   const [tif, setTif] = useState<TIF>('GTC')

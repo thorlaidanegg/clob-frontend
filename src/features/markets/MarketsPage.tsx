@@ -94,10 +94,10 @@ export function MarketsPage() {
   }, [markets, query])
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Markets</h1>
-        <div className="relative w-72">
+        <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input
             value={query}
@@ -108,8 +108,8 @@ export function MarketsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-edge">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto rounded-lg border border-edge">
+        <table className="w-full min-w-180 border-collapse">
           <thead>
             <tr className="border-b border-edge bg-panel text-[11px] uppercase tracking-wider text-muted">
               <th className="w-12 px-4 py-3 text-left font-medium">#</th>

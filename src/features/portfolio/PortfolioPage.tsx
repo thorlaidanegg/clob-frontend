@@ -36,10 +36,10 @@ export function PortfolioPage() {
   }, [positions])
 
   return (
-    <div className="bg-bg p-8">
+    <div className="bg-bg p-4 sm:p-6 lg:p-8">
       <h1 className="mb-6 text-2xl font-bold tracking-tight">Portfolio</h1>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Available Balance" value={formatDecimal(totals.available, 2)} sub="Virtual Credits" />
         <StatCard label="Reserved (in orders)" value={formatDecimal(totals.reserved, 2)} sub="Margin / open orders" />
         <StatCard label="Realized PnL" value={formatSigned(totals.realised)} sub="All time" valueClass={pnlClass(totals.realised)} />
@@ -58,7 +58,8 @@ export function PortfolioPage() {
               </span>
             )}
           </div>
-          <table className="w-full text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-140 text-xs">
             <thead>
               <tr className="border-b border-edge text-[11px] uppercase text-muted">
                 <th className="py-2 text-left font-medium">Market</th>
@@ -93,6 +94,7 @@ export function PortfolioPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Right column */}
@@ -100,7 +102,7 @@ export function PortfolioPage() {
           <div className="flex flex-col gap-2 rounded-lg border border-edge bg-panel p-5">
             <span className="text-[11px] uppercase tracking-wide text-muted">Total Portfolio Value</span>
             <div className="flex items-center gap-3">
-              <span className="font-mono text-[28px] leading-tight">{formatDecimal(totals.equity, 2)}</span>
+              <span className="font-mono text-2xl leading-tight sm:text-[28px]">{formatDecimal(totals.equity, 2)}</span>
               <Wallet className="size-5 text-accent" />
             </div>
             <span className="text-xs text-muted">Available + reserved + unrealized PnL</span>
@@ -200,7 +202,7 @@ function StatCard({
   return (
     <div className="flex flex-col gap-1 rounded-lg border border-edge bg-panel p-5">
       <span className="text-[11px] uppercase tracking-wide text-muted">{label}</span>
-      <span className={cn('font-mono text-[28px] leading-tight', valueClass)}>{value}</span>
+      <span className={cn('font-mono text-2xl leading-tight sm:text-[28px]', valueClass)}>{value}</span>
       <span className="text-xs text-muted">{sub}</span>
     </div>
   )
