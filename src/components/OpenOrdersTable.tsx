@@ -24,9 +24,9 @@ export function OpenOrdersTable({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="h-full overflow-auto">
-      <table className="w-full text-left text-[11px]">
+      <table className="w-full text-left text-[13px]">
         <thead className="sticky top-0 bg-[#0d0d10]">
-          <tr className="font-sans text-[10px] uppercase tracking-wide text-muted">
+          <tr className="font-sans text-[11px] uppercase tracking-wide text-muted">
             {COLS.map((h, i) => (
               <th key={h || i} className={cn('px-4 py-2 font-medium', i >= 3 && i <= 5 && 'text-right')}>
                 {h}

@@ -18,12 +18,8 @@ export function useLiveSync(): void {
       if (ch.startsWith('orders:')) {
         void qc.invalidateQueries({ queryKey: qk.orders.open })
         void qc.invalidateQueries({ queryKey: qk.portfolio })
-        // The engine emits depth_update on place/fill but NOT on cancel/expire —
-        // so re-seed that market's book snapshot to reflect the removed level.
-        if (msg.type === 'order_canceled' || msg.type === 'order_expired') {
-          const mid = (msg.data as { marketID?: string } | undefined)?.marketID
-          if (mid) void qc.invalidateQueries({ queryKey: qk.markets.depth(mid) })
-        }
+        // Cancels/expiries now emit a depth_update from the engine (clob v1.0.0),
+        // so the order book updates from the WS delta — no snapshot re-fetch.
       } else if (ch.startsWith('portfolio:')) {
         void qc.invalidateQueries({ queryKey: qk.portfolio })
       }

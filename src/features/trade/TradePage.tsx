@@ -1,15 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { Activity, ChevronDown } from 'lucide-react'
+import { Activity, CandlestickChart, ChevronDown, LineChart } from 'lucide-react'
 import { useDepthSnapshot, useMarket, useMarkets, useRecentTrades } from '@/api/markets'
 import { useOpenOrders, usePlaceOrder } from '@/api/orders'
 import { usePortfolio } from '@/api/portfolio'
 import { useLiveTrades, useOrderBook, type BookLevel } from '@/ws/stores'
 import { OpenOrdersTable } from '@/components/OpenOrdersTable'
+import { PositionsTable } from '@/components/PositionsTable'
 import { toast } from '@/components/Toast'
+import { PriceChart, type ChartKind } from './PriceChart'
 import { formatDecimal, toNum } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Market, OrderType, Side, TIF } from '@/lib/types'
+import type { Market, OrderType, Side, TIF, Trade } from '@/lib/types'
 
 export function TradePage() {
   const params = useParams({ strict: false }) as { market?: string }
@@ -38,7 +40,7 @@ export function TradePage() {
         <TradesAndForm market={market} cfg={cfg} trades={trades} lastPrice={lastPrice} pp={pp} qp={qp} />
       </div>
 
-      <OpenOrdersPanel />
+      <BottomPanel />
     </div>
   )
 }
@@ -108,7 +110,7 @@ function Stat({ label, value, className }: { label: string; value: string; class
   )
 }
 
-// ── Chart (no OHLC feed yet → sparkline from the trade tape) ──────────────────
+// ── Chart: candlestick / line, aggregated from the trade tape ─────────────────
 
 function ChartPanel({
   market,
@@ -118,49 +120,43 @@ function ChartPanel({
 }: {
   market: string | undefined
   lastPrice: string | undefined
-  trades: { price: string }[]
+  trades: Trade[]
   pp: number
 }) {
-  const points = useMemo(() => {
-    const xs = trades.slice(0, 80).map((t) => toNum(t.price)).reverse()
-    if (xs.length < 2) return ''
-    const min = Math.min(...xs)
-    const max = Math.max(...xs)
-    const span = max - min || 1
-    const w = 100
-    const h = 100
-    return xs
-      .map((v, i) => `${(i / (xs.length - 1)) * w},${h - ((v - min) / span) * h}`)
-      .join(' ')
-  }, [trades])
-
-  const up = trades.length >= 2 && toNum(trades[0].price) >= toNum(trades[trades.length - 1].price)
+  const [kind, setKind] = useState<ChartKind>('candle')
 
   return (
     <div className="flex w-[55%] min-w-0 flex-col border-r border-edge bg-[#0d0d10]">
-      <div className="flex items-baseline gap-3 border-b border-edge px-4 py-2 font-sans">
-        <span className="text-sm font-semibold">{market}</span>
-        <span className="text-xs text-muted">Live mid-price tape</span>
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2 font-sans">
+        <div className="flex items-baseline gap-3">
+          <span className="text-sm font-semibold">{market}</span>
+          {lastPrice && (
+            <span className="font-mono text-sm tabular-nums text-zinc-300">{formatDecimal(lastPrice, pp)}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 rounded-md border border-edge p-0.5">
+          {(['candle', 'line'] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={cn(
+                'flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors',
+                kind === k ? 'bg-panel-2 text-zinc-50' : 'text-muted hover:text-zinc-200',
+              )}
+            >
+              {k === 'candle' ? <CandlestickChart className="size-3.5" /> : <LineChart className="size-3.5" />}
+              {k === 'candle' ? 'Candles' : 'Line'}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="relative flex-1">
-        {points ? (
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
-            <polyline
-              points={points}
-              fill="none"
-              stroke={up ? 'var(--color-up)' : 'var(--color-down)'}
-              strokeWidth="0.6"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+        {trades.length >= 1 ? (
+          <PriceChart trades={trades} kind={kind} />
         ) : (
           <div className="grid size-full place-items-center font-sans text-sm text-muted">
             Waiting for trades…
-          </div>
-        )}
-        {lastPrice && (
-          <div className="absolute right-3 top-3 font-mono text-xs text-muted">
-            {formatDecimal(lastPrice, pp)}
           </div>
         )}
       </div>
@@ -208,7 +204,7 @@ function OrderBookPanel({
       <div className="border-b border-edge px-3 py-2 font-sans text-[10px] uppercase tracking-wide text-muted">
         Order Book
       </div>
-      <div className="flex justify-between px-3 py-1 font-sans text-[9px] uppercase text-muted">
+      <div className="flex justify-between px-3 py-1 font-sans text-[10px] uppercase text-muted">
         <span>Price</span>
         <span>Size</span>
         <span>Total</span>
@@ -256,7 +252,7 @@ function BookRow({
   qp: number
 }) {
   return (
-    <div className="relative flex h-5.5 items-center justify-between px-3 text-[11px]">
+    <div className="relative flex h-6 items-center justify-between px-3 text-[13px]">
       <div
         className={cn('absolute inset-y-0 right-0', side === 'ask' ? 'bg-down/15' : 'bg-up/15')}
         style={{ width: `${width}%` }}
@@ -292,17 +288,17 @@ function TradesAndForm({
       <OrderForm market={market} cfg={cfg} lastPrice={lastPrice} pp={pp} qp={qp} />
       <div className="flex min-h-0 flex-1 flex-col border-t border-edge">
         <div className="flex items-center justify-between border-b border-edge px-3 py-2">
-          <span className="font-sans text-[10px] uppercase tracking-wide text-muted">Recent Trades</span>
-          <Activity className="size-3 text-accent" />
+          <span className="font-sans text-[11px] uppercase tracking-wide text-muted">Recent Trades</span>
+          <Activity className="size-3.5 text-accent" />
         </div>
-        <div className="flex justify-between px-3 py-1 font-sans text-[9px] uppercase text-muted">
+        <div className="flex justify-between px-3 py-1 font-sans text-[10px] uppercase text-muted">
           <span>Time</span>
           <span>Price</span>
           <span>Size</span>
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           {trades.map((t) => (
-            <div key={t.tradeID} className="flex h-5 items-center justify-between px-3 text-[10px]">
+            <div key={t.tradeID} className="flex h-6 items-center justify-between px-3 text-[13px]">
               <span className="text-muted">{timeOf(t.createdAt)}</span>
               <span className={cn('tabular-nums', t.makerSide === 'ask' ? 'text-up' : 'text-down')}>
                 {formatDecimal(t.price, pp)}
@@ -358,13 +354,19 @@ function OrderForm({
   const effPrice = type === 'market' ? lastPrice ?? '0' : price || lastPrice || '0'
   const total = (toNum(effPrice) * toNum(qty)).toFixed(pp)
 
+  // Selling is long-only: you can only sell base you actually hold.
+  const heldBase = toNum(portfolio?.positions.find((p) => p.marketID === market)?.quantity)
+  const availableBase = Math.max(heldBase, 0)
+  const noInventory = side === 'ask' && availableBase <= 0
+
   function setPct(pct: number) {
+    if (side === 'ask') {
+      setQty(((availableBase * pct) / 100).toFixed(qp))
+      return
+    }
     const px = toNum(effPrice)
     if (px <= 0) return
-    if (side === 'bid') {
-      const budget = (toNum(available) * pct) / 100
-      setQty((budget / px).toFixed(qp))
-    }
+    setQty((((toNum(available) * pct) / 100) / px).toFixed(qp))
   }
 
   function submit(e: React.FormEvent) {
@@ -499,18 +501,25 @@ function OrderForm({
 
       <button
         type="submit"
-        disabled={place.isPending || !market}
+        disabled={place.isPending || !market || noInventory}
         className={cn(
-          'h-10 w-full rounded-sm text-sm font-bold text-black transition-opacity disabled:opacity-50',
+          'h-10 w-full rounded-sm text-sm font-bold text-black transition-opacity disabled:cursor-not-allowed disabled:opacity-50',
           side === 'bid' ? 'bg-accent' : 'bg-down',
         )}
       >
-        {place.isPending ? '…' : `${side === 'bid' ? 'Buy' : 'Sell'} ${base}`}
+        {place.isPending
+          ? '…'
+          : noInventory
+            ? `No ${base} to sell`
+            : `${side === 'bid' ? 'Buy' : 'Sell'} ${base}`}
       </button>
 
       {place.isError && <p className="font-sans text-[11px] text-down">{(place.error as Error).message}</p>}
       <span className="font-sans text-[11px] text-muted">
-        Available: {formatDecimal(available, 2)} {quote}
+        Available:{' '}
+        {side === 'bid'
+          ? `${formatDecimal(available, 2)} ${quote}`
+          : `${formatDecimal(availableBase, qp)} ${base}`}
       </span>
     </form>
   )
@@ -543,21 +552,37 @@ function Field({
   )
 }
 
-// ── Bottom: open orders ──────────────────────────────────────────────────────
+// ── Bottom: tabbed open orders / positions ───────────────────────────────────
 
-function OpenOrdersPanel() {
+function BottomPanel() {
   const { data: orders } = useOpenOrders()
+  const { data: portfolio } = usePortfolio()
+  const [tab, setTab] = useState<'orders' | 'positions'>('orders')
+  const positionCount = (portfolio?.positions ?? []).filter((p) => toNum(p.quantity) !== 0).length
+
+  const tabs = [
+    { key: 'orders' as const, label: 'Open Orders', count: orders?.length ?? 0 },
+    { key: 'positions' as const, label: 'Positions', count: positionCount },
+  ]
 
   return (
     <div className="flex h-52 shrink-0 flex-col border-t border-edge bg-[#0d0d10]">
       <div className="flex items-center gap-6 border-b border-edge px-4">
-        <span className="border-b-2 border-accent py-2.5 font-sans text-xs font-bold text-zinc-50">
-          Open Orders {orders?.length ? `(${orders.length})` : ''}
-        </span>
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={cn(
+              'py-2.5 font-sans text-xs font-bold transition-colors',
+              tab === t.key ? 'border-b-2 border-accent text-zinc-50' : 'text-muted hover:text-zinc-200',
+            )}
+          >
+            {t.label} {t.count ? `(${t.count})` : ''}
+          </button>
+        ))}
       </div>
-      <div className="min-h-0 flex-1">
-        <OpenOrdersTable />
-      </div>
+      <div className="min-h-0 flex-1">{tab === 'orders' ? <OpenOrdersTable /> : <PositionsTable />}</div>
     </div>
   )
 }
