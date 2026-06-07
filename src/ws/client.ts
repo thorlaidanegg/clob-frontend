@@ -30,8 +30,18 @@ class WsClient {
   private running = false
 
   constructor() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    this.url = `${proto}://${location.host}/v1/stream`
+    // Derive the WS endpoint from VITE_API_URL when the API lives on a different
+    // origin (e.g. frontend on a CDN, backend on a VM). Falls back to same-origin,
+    // which is correct when a reverse proxy serves the SPA + /v1 on one domain.
+    const api = import.meta.env.VITE_API_URL as string | undefined
+    if (api) {
+      const u = new URL(api, location.href)
+      const proto = u.protocol === 'https:' ? 'wss' : 'ws'
+      this.url = `${proto}://${u.host}/v1/stream`
+    } else {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+      this.url = `${proto}://${location.host}/v1/stream`
+    }
   }
 
   /** Optional auth frame sent on every (re)connect. With cookie auth this can stay null. */

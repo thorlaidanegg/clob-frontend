@@ -1,6 +1,6 @@
 import { useLeaderboard } from '@/api/leaderboard'
 import { useAuth } from '@/auth/AuthContext'
-import { formatSigned } from '@/lib/format'
+import { formatSigned, formatSignedCompact } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { LeaderboardEntry } from '@/lib/types'
 
@@ -30,10 +30,10 @@ export function LeaderboardPage() {
     <div className="bg-bg px-4 py-6 sm:px-6 sm:py-8 md:px-12">
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">Leaderboard</h1>
-        <div className="flex w-fit items-center gap-1 rounded-full border border-edge bg-panel p-1">
-          <span className="rounded-full bg-accent px-4 py-1 text-xs font-medium text-black">Global</span>
-          <span className="px-4 py-1 text-xs font-medium text-muted">Realized PnL</span>
-        </div>
+        <span className="flex w-fit items-center gap-2 rounded-full border border-edge bg-panel px-3 py-1.5 text-xs font-medium text-muted">
+          <span className="size-1.5 rounded-full bg-accent" />
+          Global · ranked by realized PnL
+        </span>
       </div>
 
       {/* Podium */}
@@ -148,8 +148,11 @@ function PodiumCard({ e, isMe, tall }: { e: LeaderboardEntry; isMe: boolean; tal
             <span className="rounded-sm bg-accent px-1.5 py-0.5 text-[10px] font-medium text-black">YOU</span>
           )}
         </span>
-        <span className={cn('font-mono font-bold', scoreClass(e.score), tall ? 'text-[28px]' : 'text-2xl')}>
-          {formatSigned(e.score)}
+        <span
+          title={formatSigned(e.score)}
+          className={cn('font-mono font-bold tabular-nums', scoreClass(e.score), tall ? 'text-[28px]' : 'text-2xl')}
+        >
+          {formatSignedCompact(e.score)}
         </span>
         <span className="text-[11px] font-medium text-muted">Rank #{e.rank}</span>
       </div>

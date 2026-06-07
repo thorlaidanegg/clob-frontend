@@ -5,13 +5,16 @@ import {
   Boxes,
   Cpu,
   Gauge,
+  Layers,
+  Package,
   Radio,
   ShieldCheck,
   Terminal,
   Trophy,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Footer, Nav, SectionHeading } from './chrome'
+import { Footer, LIBRARY_REPO_URL, Nav, SectionHeading, useAppEntry } from './chrome'
 
 // ── static demo data ─────────────────────────────────────────────────────────
 
@@ -68,6 +71,7 @@ export function LandingPage() {
       <Features />
       <HowItWorks />
       <ApiSection />
+      <LibrarySection />
       <LeaderboardPreview />
       <FinalCta />
       <Footer />
@@ -76,6 +80,7 @@ export function LandingPage() {
 }
 
 function Hero() {
+  const entry = useAppEntry()
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-grid" />
@@ -100,9 +105,9 @@ function Hero() {
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Link to="/login">
+            <Link to={entry}>
               <Button size="lg" className="gap-2">
-                Start trading free <ArrowRight className="size-4" />
+                {entry === '/markets' ? 'Open the app' : 'Start trading free'} <ArrowRight className="size-4" />
               </Button>
             </Link>
             <Link to="/leaderboard">
@@ -317,6 +322,7 @@ function HowItWorks() {
 }
 
 function ApiSection() {
+  const entry = useAppEntry()
   return (
     <section id="api" className="mx-auto max-w-7xl px-6 py-24">
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
@@ -358,11 +364,87 @@ function ApiSection() {
             and fire orders over REST — the exact same engine the UI trades on. Connect an AI agent
             over MCP while you&apos;re at it.
           </p>
-          <Link to="/login">
+          <Link to={entry}>
             <Button variant="outline" className="gap-2">
               Get your API key <ArrowUpRight className="size-4" />
             </Button>
           </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+const libFeatures = [
+  { icon: Package, title: 'Zero infrastructure', body: 'No database, no queue, no network. It embeds directly in any Go binary — give it config, send commands, read events.' },
+  { icon: Boxes, title: 'Every order type', body: 'Limit, market, stop, stop-limit and iceberg, with IOC / FOK / GTD, post-only and reduce-only — the full toolkit, built in.' },
+  { icon: Zap, title: 'Deterministic & fast', body: 'A single-goroutine, in-memory price-time priority book. Same inputs, same outputs, sub-millisecond matching.' },
+  { icon: Layers, title: 'Event-sourced by design', body: 'A clean command-in / event-out API. Project the event stream into Postgres, Kafka, a websocket — whatever you need.' },
+]
+
+const libCode = `import "github.com/thorlaidanegg/clob/engine"
+
+// A market is just config — no DB, no network.
+eng, _ := engine.New(cfg)
+eng.Start()
+
+// Commands in: limit, market, stop, iceberg…
+eng.Submit(cmd)
+
+// Events out: every fill, rest, cancel & book delta.
+for ev := range eng.Events() {
+    project(ev) // → DB, websocket, ledger…
+}`
+
+function LibrarySection() {
+  return (
+    <section id="library" className="relative overflow-hidden border-y border-edge bg-panel/30">
+      <div className="pointer-events-none absolute right-1/4 top-0 size-120 rounded-full bg-accent/6 blur-[120px]" />
+      <div className="relative mx-auto max-w-7xl px-6 py-24">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+          <div className="flex flex-col items-start gap-5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-edge bg-panel px-3 py-1 text-xs text-zinc-300">
+              <Cpu className="size-3.5 text-accent" /> Open source · the engine underneath
+            </span>
+            <h2 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+              Don&apos;t just trade on it.
+              <br />
+              <span className="text-gradient">Build on it.</span>
+            </h2>
+            <p className="max-w-md text-base leading-relaxed text-muted">
+              This whole exchange runs on <code className="rounded bg-panel-2 px-1.5 py-0.5 font-mono text-sm text-accent">clob</code> —
+              a standalone, dependency-free Go matching engine. PaperEx is just <em>one</em> product built on it.
+              The same library can power a prediction market, a backtester, an exchange simulator, or an
+              internal trading desk. Drop it into a Go binary and you have a real order book in a few lines.
+            </p>
+            <a href={LIBRARY_REPO_URL} target="_blank" rel="noreferrer">
+              <Button className="gap-2">
+                Explore the library <ArrowUpRight className="size-4" />
+              </Button>
+            </a>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl">
+            <div className="flex items-center gap-2 border-b border-edge bg-panel-2/60 px-4 py-2.5">
+              <span className="size-2.5 rounded-full bg-down/80" />
+              <span className="size-2.5 rounded-full bg-[#febc2e]" />
+              <span className="size-2.5 rounded-full bg-up/80" />
+              <span className="ml-2 font-mono text-xs text-muted">main.go</span>
+            </div>
+            <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed text-zinc-300">
+              <code>{libCode}</code>
+            </pre>
+          </div>
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-edge bg-edge sm:grid-cols-2 lg:grid-cols-4">
+          {libFeatures.map((f) => (
+            <div key={f.title} className="bg-bg p-6">
+              <f.icon className="size-5 text-accent" />
+              <h3 className="mt-4 text-base font-bold">{f.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{f.body}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -404,6 +486,7 @@ function LeaderboardPreview() {
 }
 
 function FinalCta() {
+  const entry = useAppEntry()
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-60" />
@@ -416,9 +499,9 @@ function FinalCta() {
           Sign up, claim your virtual credits, and put your first order on the book in under a minute.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/login">
+          <Link to={entry}>
             <Button size="lg" className="gap-2">
-              Start trading free <ArrowRight className="size-4" />
+              {entry === '/markets' ? 'Open the app' : 'Start trading free'} <ArrowRight className="size-4" />
             </Button>
           </Link>
           <Link to="/leaderboard">

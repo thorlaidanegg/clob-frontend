@@ -40,6 +40,22 @@ export function formatSigned(s: string | number, places = 2): string {
   return `${sign}${n.toLocaleString('en-US', { minimumFractionDigits: places, maximumFractionDigits: places })}`
 }
 
+/** Signed PnL in compact notation: 1234 -> "+1.23K", -2_500_000 -> "-2.5M". */
+export function formatSignedCompact(s: string | number, places = 2): string {
+  const n = toNum(s)
+  const sign = n > 0 ? '+' : n < 0 ? '-' : ''
+  const abs = Math.abs(n)
+  const fmt = (v: number, suffix: string) => {
+    // Trim trailing zeros so "1.00K" reads as "1K", "1.50M" as "1.5M".
+    const str = v.toFixed(places).replace(/\.?0+$/, '')
+    return `${sign}${str}${suffix}`
+  }
+  if (abs >= 1e9) return fmt(abs / 1e9, 'B')
+  if (abs >= 1e6) return fmt(abs / 1e6, 'M')
+  if (abs >= 1e3) return fmt(abs / 1e3, 'K')
+  return `${sign}${abs.toLocaleString('en-US', { minimumFractionDigits: places, maximumFractionDigits: places })}`
+}
+
 /** A percentage from a ratio (0.0123 -> "+1.23%"). */
 export function formatPct(ratio: number, places = 2): string {
   const sign = ratio > 0 ? '+' : ''

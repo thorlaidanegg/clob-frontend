@@ -1,9 +1,22 @@
 import { Link } from '@tanstack/react-router'
 import { CandlestickChart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/auth/AuthContext'
 
 /** The public GitHub repo backing the bot SDK — the "docs" target. */
 export const BOT_REPO_URL = 'https://github.com/thorlaidanegg/clob-bot'
+/** The matching-engine library that the whole platform is built on. */
+export const LIBRARY_REPO_URL = 'https://github.com/thorlaidanegg/clob'
+
+/**
+ * Where the "Start trading" / "Get started" CTAs should point: straight into
+ * the app if the visitor is already signed in, otherwise to the login screen.
+ * This keeps authenticated users from ever seeing the login form again.
+ */
+export function useAppEntry(): '/markets' | '/login' {
+  const { status } = useAuth()
+  return status === 'authed' ? '/markets' : '/login'
+}
 
 /** GitHub mark — lucide dropped its brand icons, so we inline it. */
 export function GithubIcon({ className = 'size-4' }: { className?: string }) {
@@ -17,7 +30,7 @@ export function GithubIcon({ className = 'size-4' }: { className?: string }) {
 export function Wordmark({ className = 'size-7' }: { className?: string }) {
   return (
     <Link to="/" className="flex items-center gap-2">
-      <div className={`flex ${className} items-center justify-center rounded-md bg-gradient-to-br from-accent to-emerald-400 shadow-[0_0_20px_-4px_rgba(22,199,132,0.6)]`}>
+      <div className={`flex ${className} items-center justify-center rounded-md bg-linear-to-br from-accent to-emerald-400 shadow-[0_0_20px_-4px_rgba(22,199,132,0.6)]`}>
         <CandlestickChart className="size-[60%] text-black" />
       </div>
       <span className="text-base font-bold tracking-tight">PaperEx</span>
@@ -26,6 +39,7 @@ export function Wordmark({ className = 'size-7' }: { className?: string }) {
 }
 
 export function Nav() {
+  const entry = useAppEntry()
   return (
     <header className="sticky top-0 z-50 border-b border-edge/60 bg-bg/70 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
@@ -42,8 +56,8 @@ export function Nav() {
               <GithubIcon /> GitHub
             </Button>
           </a>
-          <Link to="/login">
-            <Button size="sm">Start trading</Button>
+          <Link to={entry}>
+            <Button size="sm">{entry === '/markets' ? 'Open app' : 'Start trading'}</Button>
           </Link>
         </div>
       </div>

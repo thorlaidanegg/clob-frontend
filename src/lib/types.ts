@@ -86,6 +86,7 @@ export interface Market {
   feeModel: FeeModel
   state: MarketState
   createdBy: string
+  auctionClearsAt?: string // RFC3339; set while an opening auction is pending
 }
 
 export interface DepthLevel {

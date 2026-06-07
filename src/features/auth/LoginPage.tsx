@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, Navigate, useNavigate } from '@tanstack/react-router'
 import { CandlestickChart, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ApiError } from '@/lib/http'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 type Mode = 'login' | 'signup'
 
 export function LoginPage() {
-  const { login, signup } = useAuth()
+  const { login, signup, status } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -17,6 +17,10 @@ export function LoginPage() {
   const [show, setShow] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // Already signed in (e.g. clicked "Start trading" from the landing page while
+  // authenticated) — skip the form and go straight into the app.
+  if (status === 'authed') return <Navigate to="/markets" />
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

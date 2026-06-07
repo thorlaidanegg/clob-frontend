@@ -1,0 +1,19 @@
+# Serves the built SPA and reverse-proxies the API onto the SAME origin, so the
+# browser, REST (/v1) and WebSocket (/v1/stream) all share one domain — no CORS,
+# no separate WS host. SITE_ADDRESS is a domain (auto-HTTPS) or ":80" for local.
+{$SITE_ADDRESS:localhost} {
+	encode gzip
+
+	# API + WebSocket → the clob-server app (ROLE=all listens on :8080).
+	@api path /v1 /v1/*
+	handle @api {
+		reverse_proxy {$APP_UPSTREAM:app:8080}
+	}
+
+	# Everything else is the single-page app (client-side routing fallback).
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

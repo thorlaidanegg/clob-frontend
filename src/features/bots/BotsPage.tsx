@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { BOT_REPO_URL, Footer, GithubIcon, Nav, SectionHeading } from '@/features/landing/chrome'
+import { BOT_REPO_URL, Footer, GithubIcon, Nav, SectionHeading, useAppEntry } from '@/features/landing/chrome'
 
 // ── static content ──────────────────────────────────────────────────────────
 
@@ -137,6 +137,7 @@ export function BotsPage() {
 }
 
 function Hero() {
+  const entry = useAppEntry()
   return (
     <section className="relative overflow-hidden border-b border-edge">
       <div className="pointer-events-none absolute inset-0 bg-grid" />
@@ -161,9 +162,9 @@ function Hero() {
                 <BookOpen className="size-4" /> Read the docs
               </Button>
             </a>
-            <Link to="/login">
+            <Link to={entry}>
               <Button variant="outline" size="lg" className="gap-2">
-                Get an API key <ArrowRight className="size-4" />
+                {entry === '/markets' ? 'Open the app' : 'Get an API key'} <ArrowRight className="size-4" />
               </Button>
             </Link>
           </div>
@@ -445,6 +446,7 @@ function CodeBlock({ title, code }: { title: string; code: string }) {
 }
 
 function FinalCta() {
+  const entry = useAppEntry()
   return (
     <section className="relative overflow-hidden border-t border-edge">
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-60" />
@@ -462,8 +464,8 @@ function FinalCta() {
               <GithubIcon /> View on GitHub
             </Button>
           </a>
-          <Link to="/login">
-            <Button variant="outline" size="lg">Get an API key</Button>
+          <Link to={entry}>
+            <Button variant="outline" size="lg">{entry === '/markets' ? 'Open the app' : 'Get an API key'}</Button>
           </Link>
         </div>
       </div>

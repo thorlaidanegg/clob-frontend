@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { Activity, CandlestickChart, ChevronDown, LineChart } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Activity, CandlestickChart, ChevronDown, Gavel, LineChart } from 'lucide-react'
 import { useDepthSnapshot, useMarket, useMarkets, useRecentTrades } from '@/api/markets'
+import { qk } from '@/api/queryKeys'
 import { useOpenOrders, usePlaceOrder } from '@/api/orders'
 import { usePortfolio } from '@/api/portfolio'
 import { useLiveTrades, useOrderBook, type BookLevel } from '@/ws/stores'
@@ -41,6 +43,7 @@ export function TradePage() {
   return (
     <div className="flex min-h-full flex-col font-mono lg:h-full lg:overflow-hidden">
       <MarketHeader market={market} cfg={cfg} lastPrice={lastPrice} bestBid={bestBid} bestAsk={bestAsk} pp={pp} />
+      <AuctionBanner market={market} cfg={cfg} lastPrice={lastPrice} pp={pp} />
 
       {/* Desktop: 3 columns. Mobile: stacked (chart → form → book) and scrollable. */}
       <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
@@ -119,6 +122,80 @@ function MarketHeader({
       </div>
     </div>
   )
+}
+
+// ── Opening call-auction phase: countdown, then reveal the clearing price ─────
+
+function AuctionBanner({
+  market,
+  cfg,
+  lastPrice,
+  pp,
+}: {
+  market: string | undefined
+  cfg: Market | undefined
+  lastPrice: string | undefined
+  pp: number
+}) {
+  const qc = useQueryClient()
+  const clearsAtMs = cfg?.auctionClearsAt ? Date.parse(cfg.auctionClearsAt) : 0
+  const [now, setNow] = useState(() => Date.now())
+
+  // Tick the countdown while the auction is pending or just cleared.
+  useEffect(() => {
+    if (!clearsAtMs || Date.now() > clearsAtMs + 12_000) return
+    const id = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(id)
+  }, [clearsAtMs])
+
+  // The engine clears the auction on its own timer; refetch just after so the
+  // opening print + continuous book appear.
+  useEffect(() => {
+    if (!clearsAtMs || !market) return
+    const ms = clearsAtMs - Date.now() + 700
+    if (ms <= 0) return
+    const id = setTimeout(() => {
+      void qc.invalidateQueries({ queryKey: qk.markets.depth(market) })
+      void qc.invalidateQueries({ queryKey: qk.markets.trades(market) })
+      void qc.invalidateQueries({ queryKey: qk.markets.detail(market) })
+    }, ms)
+    return () => clearTimeout(id)
+  }, [clearsAtMs, market, qc])
+
+  if (!clearsAtMs) return null
+  const remaining = clearsAtMs - now
+
+  if (remaining > 0) {
+    const secs = Math.ceil(remaining / 1000)
+    return (
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#febc2e]/40 bg-[#febc2e]/10 px-3 py-2 font-sans text-xs sm:px-4">
+        <span className="flex items-center gap-1.5 font-semibold text-[#febc2e]">
+          <Gavel className="size-3.5" /> Opening auction
+        </span>
+        <span className="text-zinc-300">
+          Collecting orders — the book and a single clearing price reveal at the open.
+        </span>
+        <span className="ml-auto font-mono tabular-nums text-[#febc2e]">clears in {secs}s</span>
+      </div>
+    )
+  }
+
+  // Just cleared: surface the opening (clearing) price for a few seconds.
+  if (remaining > -12_000) {
+    return (
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-accent/40 bg-accent/10 px-3 py-2 font-sans text-xs sm:px-4">
+        <span className="flex items-center gap-1.5 font-semibold text-accent">
+          <Gavel className="size-3.5" /> Auction cleared
+        </span>
+        <span className="text-zinc-300">
+          Opened at{' '}
+          <span className="font-mono text-zinc-100">{lastPrice ? formatDecimal(lastPrice, pp) : '—'}</span>{' '}
+          — continuous trading is live.
+        </span>
+      </div>
+    )
+  }
+  return null
 }
 
 function Stat({ label, value, className }: { label: string; value: string; className?: string }) {

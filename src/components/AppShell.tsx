@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, Outlet } from '@tanstack/react-router'
-import { Bot, CandlestickChart, Home, KeyRound, LineChart, Trophy, Wallet, Zap } from 'lucide-react'
+import { Bot, CandlestickChart, Home, KeyRound, LineChart, Search, Trophy, Wallet, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { usePortfolio } from '@/api/portfolio'
@@ -7,6 +8,7 @@ import { useWsStatus } from '@/ws/client'
 import { useLiveSync } from '@/ws/useLiveSync'
 import { formatDecimal } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { CommandPalette } from './CommandPalette'
 
 // Core app routes — shown in the desktop nav and the mobile bottom bar.
 const NAV: { to: string; label: string; icon: LucideIcon }[] = [
@@ -32,10 +34,24 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const ws = useWsStatus()
   const { data: portfolio } = usePortfolio()
+  const [cmdOpen, setCmdOpen] = useState(false)
   useLiveSync()
+
+  // Global ⌘K / Ctrl-K opens the command palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCmdOpen((o) => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <div className="flex h-full flex-col">
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
       <header className="flex h-12 shrink-0 items-center justify-between gap-1 border-b border-edge bg-[#0d0d10] px-3 sm:px-4">
         <Link to="/markets" className="flex items-center gap-2 font-bold tracking-tight">
           <div className="flex size-6 items-center justify-center rounded-md bg-accent">
@@ -77,6 +93,15 @@ export function AppShell() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setCmdOpen(true)}
+            className="hidden items-center gap-2 rounded-md border border-edge bg-panel-2 px-2.5 py-1 text-xs text-muted transition-colors hover:text-zinc-100 md:flex"
+            title="Search (⌘K)"
+          >
+            <Search className="size-3.5" />
+            <span>Search</span>
+            <kbd className="rounded border border-edge px-1 font-mono text-[10px]">⌘K</kbd>
+          </button>
           {portfolio && (
             <div className="flex items-center gap-1.5 rounded-md border border-edge bg-panel-2 px-2 py-1 sm:gap-2 sm:pl-2.5 sm:pr-3">
               <Wallet className="size-3.5 shrink-0 text-muted" />
